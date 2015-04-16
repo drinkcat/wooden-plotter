@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+{% autoescape true %}
+<html>
+  <!-- [START head_html] -->
+  <head>
+    <link type="text/css" rel="stylesheet" href="/stylesheets/main.css" />
+  </head>
+  <!-- [END head_html] -->
+  <body>
+    <h1>Clock</h1>
+    Device: <b>{{ device }}</b><br/>
+    Last seen: {{ lastseen }}<br/>
+    <h3>Last 10 commands</h3>
+    {% for cmd in cmds %}
+      <pre>{{ cmd.datestr }}, {{ cmd.type }}: {{ cmd.content }}</pre>
+    {% endfor %}
+
+    <h3>Input commands</h3>
+    Enter some text:<br/>
+    <form action="/add" method="post">
+      <input type="hidden" name="device" value="{{ device }}"></input>
+      <div><input type="text" name="text"></input></div>
+      <div><input type="submit" value="Submit text"></div>
+    </form>
+<!--    <form action="/path" method="post">
+      <div><textarea name="content" rows="3" cols="60"></textarea></div>
+      <div><input type="submit" value="Submit path"></div>
+    </form>-->
+  </body>
+</html>
+{% endautoescape %}
