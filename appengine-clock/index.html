@@ -15,7 +15,10 @@
       <pre>{{ cmd.datestr }}, {{ cmd.type }}: {{ cmd.content }}</pre>
     {% endfor %}
 
-    <h3>Input commands</h3>
+      <h3>Input commands</h3>
+
+      The device may take up to 30 seconds to fetch the commands.<br/>
+      
     Enter some text:<br/>
     <form action="/add" method="post">
       <input type="hidden" name="device" value="{{ device }}"></input>
@@ -25,7 +28,9 @@
 <!--    <form action="/path" method="post">
       <div><textarea name="content" rows="3" cols="60"></textarea></div>
       <div><input type="submit" value="Submit path"></div>
-    </form>-->
+</form>-->
+  <hr/>
+  <a href="https://github.com/drinkcat/wooden-plotter">Source code on github</a>
   </body>
 </html>
 {% endautoescape %}
