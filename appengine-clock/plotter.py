@@ -122,7 +122,7 @@ class Raw(webapp2.RequestHandler):
         tz = self.request.get('tz', "UTC")
         device = self.request.get('device', DEFAULT_DEVICE)
         laststr = self.request.get('last', "")
-        if (laststr != ""):
+        if (laststr != "" and laststr != "-1"):
             lastdate = datetime.fromtimestamp(float(laststr))
         else:
             lastdate = datetime.now()-timedelta(hours=1)
