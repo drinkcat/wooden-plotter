@@ -43,14 +43,7 @@ unsigned long lastplot = 0; /* Last time anything was plotted */
 /* Compensation for incorrect servo angles, in deci-degrees */
 const unsigned long plotdelay = 5*60; /* Plot time every 5 minutes */
 
-const int servoComp[3] = {10, -75, 0};
-
-//const char* SSID = "XXX";
-//const char* PASSWORD = "XXX";
-
-const char* HOST = "boxwood-dynamo-91415.appspot.com";
-const char* TZ = "Asia%2FHo_Chi_Minh";
-const char* DEVICE = "fablab-saigon";
+#include "config.h"
 
 void setup() {
     Serial.begin(9600);
@@ -140,17 +133,17 @@ bool wifi_setup() {
     wifiSerial.begin(115200);
     wifiSerial.setTimeout(1000);
     
-    DEBUG_PRINTln("WiFi setup");
+    STATUS_PRINTln("WiFi setup");
     
     wifi_flush();
-    DEBUG_PRINTln("Restart");    
+    STATUS_PRINTln("Restart");    
     if (!wifi_cmdok("AT+RST")) {
       return false;
     }
     delay(2000);
     wifi_flush();
     
-    DEBUG_PRINTln("Kick");
+    STATUS_PRINTln("Kick");
     if (!wifi_cmdok("AT")) {
       return false;
     }
@@ -158,10 +151,10 @@ bool wifi_setup() {
     if (wifi_cmdstring("AT+GMR", buffer, sizeof(buffer)) < 0) {
       return false;
     }
-    DEBUG_PRINT("Version");
-    DEBUG_PRINTln(buffer);
+    STATUS_PRINT("Version");
+    STATUS_PRINTln(buffer);
 
-    DEBUG_PRINTln("Sta mode");
+    STATUS_PRINTln("Sta mode");
     if (!wifi_cmdok("AT+CWMODE=1")) {
       return false;
     }
@@ -256,7 +249,7 @@ bool wifi_fetch() {
     if (len <= 5) return false;
     buffer[5] = 0;
     STATUS_PRINT(buffer);
-    if ((millis()-lastplot)/1000 > plotdelay) {
+    if (lastplot == 0 || (millis()-lastplot)/1000 > plotdelay) {
       STATUS_PRINTln(" => Plotting...");
       text(buffer, 0, (LEN_X-1)*STEP, 0, (LEN_Y-1)*STEP);
       lastplot = millis();
@@ -306,11 +299,11 @@ void plotter_setup() {
   }*/
 
   lift(true);
+  delay(1000);
   servoWrite(0, 900);
   servoWrite(1, 900);
   delay(2000);
-  lift(false);
-  servo[2].detach();
+  servo_rest(true);
 }
 
 void servoWrite(int index, int value) {
@@ -463,9 +456,45 @@ void lift(boolean yes) {
    lifted = yes;
 }
 
+boolean resting = false;
+
+void servo_rest(boolean yes) {
+  if ((yes && resting) || (!yes && !resting)) {
+    return;
+  }
+  
+  if (yes) {
+    /* Start by going to left-top corner */
+    lift(true);
+    delay(500);
+    gopos(0, 0);
+    int a1 = interpolate(ANGLE1, 0, 0);
+    int a2 = interpolate(ANGLE2, 0, 0);
+    
+    servo[0].write(5);
+    servo[1].write(60);
+    delay(3000);
+    lift(false);
+    
+    servo[0].detach();
+    servo[1].detach();
+  } else {
+    servo[0].attach(8); //Left
+    servo[1].attach(9); //Right
+    delay(500);
+    lift(true);
+    delay(500);
+    gopos(0.1, 0.1);   
+  }
+  
+  resting = yes;
+}
+
+/* Draw rectangle, then rest */
 void rect(float x1, float x2, float y1, float y2) {
   int i, j;
   i = x1;
+  servo_rest(false);
   lift(true);
   gopos(x1, y1);
   delay(100);
@@ -474,10 +503,13 @@ void rect(float x1, float x2, float y1, float y2) {
   gopos(x2, y2);
   gopos(x2, y1);
   gopos(x1, y1);
+  servo_rest(true);
 }
 
+/* Draw circle, then rest */
 void circle(float x, float y, float r) {
   int angle = 0;
+  servo_rest(false);
   lift(true);
   gopos(x, y+r);
   delay(100);
@@ -486,7 +518,8 @@ void circle(float x, float y, float r) {
     float x1 = x+r*sin(angle*PI/180);
     float y1 = y+r*cos(angle*PI/180);
     gopos(x1, y1);
-  }  
+  }
+  servo_rest(true);
 }
 
 int chrtopos(char chr) {
@@ -495,6 +528,7 @@ int chrtopos(char chr) {
   return pos;
 }
 
+/* Draw letter (no rest) */
 /* h is maximum height, i.e. letter writes from y-h to y+h */
 float letter(char chr, float x, float y, float h) {
   int pos = chrtopos(chr);
@@ -556,6 +590,7 @@ float letter(char chr, float x, float y, float h) {
   return (nx2-nx1)*scale;
 }
 
+/* Draw text, then rest */
 void text(const char* str, float x1, float x2, float y1, float y2) {
   if (x1 >= x2 || y1 >= y2) return;
   
@@ -600,8 +635,10 @@ void text(const char* str, float x1, float x2, float y1, float y2) {
   DEBUG_PRINT(height);
   DEBUG_PRINTln();
   
+  servo_rest(false);
   for (const char* ptr = str; *ptr; ptr++) {
     x += letter(*ptr, x, basey, height);
   }
+  servo_rest(true);
 }
 
